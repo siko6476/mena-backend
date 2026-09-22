@@ -17,6 +17,14 @@ module.exports = (req, res) => {
     });
   }
 
+  if (path === "/app/feedback") {
+    return res.status(200).json({
+      status: "ok",
+      service: "feedback",
+      server_region: "MENA"
+    });
+  }
+
   return res.status(404).json({
     status: 404,
     message: "Endpoint not found"
