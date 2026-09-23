@@ -22,8 +22,16 @@ module.exports = async (req, res) => {
   // Feedback
   if (path === "/app/feedback") {
     return res.status(200).json({
-      status: "ok",
-      service: "feedback",
+      status: 0,
+      supports_implicit_sdk_logging: true,
+      gdpv4_nux_enabled: false,
+      gdpv4_nux_content: {},
+      android_dialog_configs: {},
+      android_sdk_error_categories: [],
+      ios_dialog_configs: {},
+      ios_sdk_dialog_flows: {},
+      ios_sdk_error_categories: [],
+      id: "feedback",
       server_region: "MENA"
     });
   }
@@ -93,7 +101,6 @@ module.exports = async (req, res) => {
       tokenUrl.searchParams.set("code", code);
 
       const tokenResponse = await fetch(tokenUrl);
-
       const tokenData = await tokenResponse.json();
 
       if (!tokenResponse.ok || !tokenData.access_token) {
@@ -142,6 +149,7 @@ module.exports = async (req, res) => {
     }
   }
 
+  // أي Endpoint غير معروف
   return res.status(404).json({
     status: 404,
     message: "Endpoint not found"
