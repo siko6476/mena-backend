@@ -24,8 +24,7 @@ module.exports = async (req, res) => {
   if (path === "/app/info/get") {
     return res.status(200).json({
       status: 0,
-      client_log: false,
-      server_region: "MENA"
+      client_log: false
     });
   }
 
@@ -43,18 +42,16 @@ module.exports = async (req, res) => {
       ios_dialog_configs: {},
       ios_sdk_dialog_flows: {},
       ios_sdk_error_categories: [],
-      id: "feedback",
-      server_region: "MENA"
+      id: "feedback"
     });
   }
 
   // =========================
-  // Connect - مشروع MENA
+  // Connect
   // =========================
   if (path === "/connect") {
     return res.status(200).json({
       status: "ok",
-      server: "MENA",
       path: "/connect"
     });
   }
