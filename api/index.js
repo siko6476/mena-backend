@@ -92,6 +92,26 @@ module.exports = async (req, res) => {
   if (path === "/auth/facebook/callback") {
     const code = url.searchParams.get("code");
 
+    // Facebook OAuth error
+    const fbError = url.searchParams.get("error");
+    const fbErrorDescription =
+      url.searchParams.get("error_description");
+
+    if (fbError) {
+      console.error("FACEBOOK OAUTH ERROR:", {
+        error: fbError,
+        description: fbErrorDescription
+      });
+
+      return res.status(400).json({
+        status: "error",
+        message: "Facebook OAuth error",
+        error: fbError,
+        description: fbErrorDescription || null
+      });
+    }
+
+    // لا يوجد authorization code
     if (!code) {
       return res.status(400).json({
         status: "error",
@@ -121,16 +141,34 @@ module.exports = async (req, res) => {
         "https://graph.facebook.com/v26.0/oauth/access_token"
       );
 
-      tokenUrl.searchParams.set("client_id", appId);
-      tokenUrl.searchParams.set("client_secret", appSecret);
-      tokenUrl.searchParams.set("redirect_uri", redirectUri);
-      tokenUrl.searchParams.set("code", code);
+      tokenUrl.searchParams.set(
+        "client_id",
+        appId
+      );
+
+      tokenUrl.searchParams.set(
+        "client_secret",
+        appSecret
+      );
+
+      tokenUrl.searchParams.set(
+        "redirect_uri",
+        redirectUri
+      );
+
+      tokenUrl.searchParams.set(
+        "code",
+        code
+      );
 
       const tokenResponse = await fetch(tokenUrl);
       const tokenData = await tokenResponse.json();
 
       if (!tokenResponse.ok || !tokenData.access_token) {
-        console.error("FACEBOOK TOKEN ERROR:", tokenData);
+        console.error(
+          "FACEBOOK TOKEN ERROR:",
+          tokenData
+        );
 
         return res.status(500).json({
           status: "error",
@@ -159,7 +197,10 @@ module.exports = async (req, res) => {
       const userData = await userResponse.json();
 
       if (!userResponse.ok) {
-        console.error("FACEBOOK USER ERROR:", userData);
+        console.error(
+          "FACEBOOK USER ERROR:",
+          userData
+        );
 
         return res.status(500).json({
           status: "error",
@@ -167,13 +208,19 @@ module.exports = async (req, res) => {
         });
       }
 
+      // =========================
+      // نجاح تسجيل الدخول
+      // =========================
       return res.status(200).json({
         status: "success",
         user: userData
       });
 
     } catch (error) {
-      console.error("FACEBOOK ERROR:", error);
+      console.error(
+        "FACEBOOK ERROR:",
+        error
+      );
 
       return res.status(500).json({
         status: "error",
