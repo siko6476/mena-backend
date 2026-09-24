@@ -1,7 +1,9 @@
 module.exports = async (req, res) => {
+  const BASE_URL = "https://gconn10.vercel.app";
+
   const url = new URL(
     req.url,
-    `https://${req.headers.host || "gconectn10.vercel.app"}`
+    `https://${req.headers.host || "gconn10.vercel.app"}`
   );
 
   const path = url.pathname;
@@ -73,7 +75,7 @@ module.exports = async (req, res) => {
 
     const redirectUri =
       process.env.FB_REDIRECT_URI ||
-      "https://gconectn10.vercel.app/auth/facebook/callback";
+      `${BASE_URL}/auth/facebook/callback`;
 
     const params = new URLSearchParams({
       client_id: appId,
@@ -113,7 +115,7 @@ module.exports = async (req, res) => {
 
     const redirectUri =
       process.env.FB_REDIRECT_URI ||
-      "https://gconectn10.vercel.app/auth/facebook/callback";
+      `${BASE_URL}/auth/facebook/callback`;
 
     try {
       // =========================
