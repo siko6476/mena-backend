@@ -1,7 +1,14 @@
 module.exports = async (req, res) => {
-  const path = req.url.split("?")[0];
+  const url = new URL(
+    req.url,
+    `https://${req.headers.host || "gconectn10.vercel.app"}`
+  );
 
+  const path = url.pathname;
+
+  // =========================
   // الصفحة الرئيسية
+  // =========================
   if (path === "/" || path === "/api" || path === "/api/") {
     return res.status(200).json({
       status: "online",
@@ -10,7 +17,9 @@ module.exports = async (req, res) => {
     });
   }
 
+  // =========================
   // معلومات المشروع
+  // =========================
   if (path === "/app/info/get") {
     return res.status(200).json({
       status: 0,
@@ -19,7 +28,9 @@ module.exports = async (req, res) => {
     });
   }
 
+  // =========================
   // Feedback
+  // =========================
   if (path === "/app/feedback") {
     return res.status(200).json({
       status: 0,
@@ -36,7 +47,20 @@ module.exports = async (req, res) => {
     });
   }
 
-  // بدء تسجيل الدخول بواسطة Facebook
+  // =========================
+  // Connect - مشروع MENA
+  // =========================
+  if (path === "/connect") {
+    return res.status(200).json({
+      status: "ok",
+      server: "MENA",
+      path: "/connect"
+    });
+  }
+
+  // =========================
+  // Facebook Login
+  // =========================
   if (path === "/auth/facebook") {
     const appId = process.env.FB_APP_ID;
 
@@ -64,9 +88,11 @@ module.exports = async (req, res) => {
     );
   }
 
+  // =========================
   // Facebook Callback
+  // =========================
   if (path === "/auth/facebook/callback") {
-    const code = req.query?.code;
+    const code = url.searchParams.get("code");
 
     if (!code) {
       return res.status(400).json({
@@ -90,7 +116,9 @@ module.exports = async (req, res) => {
       "https://gconectn10.vercel.app/auth/facebook/callback";
 
     try {
+      // =========================
       // تحويل code إلى Access Token
+      // =========================
       const tokenUrl = new URL(
         "https://graph.facebook.com/v26.0/oauth/access_token"
       );
@@ -103,55 +131,4 @@ module.exports = async (req, res) => {
       const tokenResponse = await fetch(tokenUrl);
       const tokenData = await tokenResponse.json();
 
-      if (!tokenResponse.ok || !tokenData.access_token) {
-        console.error("FACEBOOK TOKEN ERROR:", tokenData);
-
-        return res.status(500).json({
-          status: "error",
-          message: "Could not obtain Facebook access token"
-        });
-      }
-
-      const accessToken = tokenData.access_token;
-
-      // جلب معلومات المستخدم
-      const userUrl = new URL(
-        "https://graph.facebook.com/v26.0/me"
-      );
-
-      userUrl.searchParams.set("fields", "id,name,email");
-      userUrl.searchParams.set("access_token", accessToken);
-
-      const userResponse = await fetch(userUrl);
-      const userData = await userResponse.json();
-
-      if (!userResponse.ok) {
-        console.error("FACEBOOK USER ERROR:", userData);
-
-        return res.status(500).json({
-          status: "error",
-          message: "Could not obtain Facebook user information"
-        });
-      }
-
-      return res.status(200).json({
-        status: "success",
-        user: userData
-      });
-
-    } catch (error) {
-      console.error("FACEBOOK ERROR:", error);
-
-      return res.status(500).json({
-        status: "error",
-        message: "Facebook authentication failed"
-      });
-    }
-  }
-
-  // أي Endpoint غير معروف
-  return res.status(404).json({
-    status: 404,
-    message: "Endpoint not found"
-  });
-};
+      if (!tokenResponse.ok ||
