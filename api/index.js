@@ -13,9 +13,8 @@ module.exports = async (req, res) => {
   // =========================
   if (path === "/" || path === "/api" || path === "/api/") {
     return res.status(200).json({
-      status: "online",
-      server: "MENA",
-      message: "MENA backend is active"
+      status: 0,
+      client_log: false
     });
   }
 
