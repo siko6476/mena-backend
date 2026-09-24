@@ -131,4 +131,64 @@ module.exports = async (req, res) => {
       const tokenResponse = await fetch(tokenUrl);
       const tokenData = await tokenResponse.json();
 
-      if (!tokenResponse.ok ||
+      if (!tokenResponse.ok || !tokenData.access_token) {
+        console.error("FACEBOOK TOKEN ERROR:", tokenData);
+
+        return res.status(500).json({
+          status: "error",
+          message: "Could not obtain Facebook access token"
+        });
+      }
+
+      // =========================
+      // جلب معلومات المستخدم
+      // =========================
+      const userUrl = new URL(
+        "https://graph.facebook.com/v26.0/me"
+      );
+
+      userUrl.searchParams.set(
+        "fields",
+        "id,name,email"
+      );
+
+      userUrl.searchParams.set(
+        "access_token",
+        tokenData.access_token
+      );
+
+      const userResponse = await fetch(userUrl);
+      const userData = await userResponse.json();
+
+      if (!userResponse.ok) {
+        console.error("FACEBOOK USER ERROR:", userData);
+
+        return res.status(500).json({
+          status: "error",
+          message: "Could not obtain Facebook user information"
+        });
+      }
+
+      return res.status(200).json({
+        status: "success",
+        user: userData
+      });
+
+    } catch (error) {
+      console.error("FACEBOOK ERROR:", error);
+
+      return res.status(500).json({
+        status: "error",
+        message: "Facebook authentication failed"
+      });
+    }
+  }
+
+  // =========================
+  // Endpoint غير معروف
+  // =========================
+  return res.status(404).json({
+    status: 404,
+    message: "Endpoint not found"
+  });
+};
