@@ -67,16 +67,23 @@ async function readBody(req) {
  * =========================================================
  */
 
-async function exchangeFacebookCode(code, res, redirectUriOverride) {
+async function exchangeFacebookCode(
+  code,
+  res,
+  redirectUriOverride
+) {
   const appId = process.env.FB_APP_ID;
   const appSecret = process.env.FB_APP_SECRET;
 
   if (!appId || !appSecret) {
-    console.error("Missing Facebook environment variables");
+    console.error(
+      "Missing Facebook environment variables"
+    );
 
     return json(res, 500, {
       status: "error",
-      message: "Facebook environment variables are missing"
+      message:
+        "Facebook environment variables are missing"
     });
   }
 
@@ -86,17 +93,41 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
     `${BASE_URL}/auth/facebook/callback`;
 
   try {
+    /*
+     * =====================================================
+     * Exchange Facebook authorization code
+     * =====================================================
+     */
+
     const tokenUrl = new URL(
       `${FACEBOOK_API}/oauth/access_token`
     );
 
-    tokenUrl.searchParams.set("client_id", appId);
-    tokenUrl.searchParams.set("client_secret", appSecret);
-    tokenUrl.searchParams.set("redirect_uri", redirectUri);
-    tokenUrl.searchParams.set("code", code);
+    tokenUrl.searchParams.set(
+      "client_id",
+      appId
+    );
 
-    const tokenResponse = await fetch(tokenUrl.toString());
-    const tokenText = await tokenResponse.text();
+    tokenUrl.searchParams.set(
+      "client_secret",
+      appSecret
+    );
+
+    tokenUrl.searchParams.set(
+      "redirect_uri",
+      redirectUri
+    );
+
+    tokenUrl.searchParams.set(
+      "code",
+      code
+    );
+
+    const tokenResponse =
+      await fetch(tokenUrl.toString());
+
+    const tokenText =
+      await tokenResponse.text();
 
     let tokenData = {};
 
@@ -106,21 +137,37 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
       tokenData = {};
     }
 
-    if (!tokenResponse.ok || !tokenData.access_token) {
-      console.error("FACEBOOK TOKEN ERROR:", {
-        status: tokenResponse.status,
-        error: tokenData?.error || null,
-        error_type: tokenData?.error?.type || null,
-        error_code: tokenData?.error?.code || null
-      });
+    if (
+      !tokenResponse.ok ||
+      !tokenData.access_token
+    ) {
+      console.error(
+        "FACEBOOK TOKEN ERROR:",
+        {
+          status: tokenResponse.status,
+          error: tokenData?.error || null,
+          error_type:
+            tokenData?.error?.type || null,
+          error_code:
+            tokenData?.error?.code || null
+        }
+      );
 
       return json(res, 400, {
         status: "error",
-        message: "Invalid Facebook authorization code"
+        message:
+          "Invalid Facebook authorization code"
       });
     }
 
-    const userUrl = new URL(`${FACEBOOK_API}/me`);
+    /*
+     * =====================================================
+     * Get Facebook user information
+     * =====================================================
+     */
+
+    const userUrl =
+      new URL(`${FACEBOOK_API}/me`);
 
     userUrl.searchParams.set(
       "fields",
@@ -132,8 +179,11 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
       tokenData.access_token
     );
 
-    const userResponse = await fetch(userUrl.toString());
-    const userText = await userResponse.text();
+    const userResponse =
+      await fetch(userUrl.toString());
+
+    const userText =
+      await userResponse.text();
 
     let userData = {};
 
@@ -143,17 +193,31 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
       userData = {};
     }
 
-    if (!userResponse.ok || !userData.id) {
-      console.error("FACEBOOK USER ERROR:", {
-        status: userResponse.status,
-        error: userData?.error || null
-      });
+    if (
+      !userResponse.ok ||
+      !userData.id
+    ) {
+      console.error(
+        "FACEBOOK USER ERROR:",
+        {
+          status: userResponse.status,
+          error:
+            userData?.error || null
+        }
+      );
 
       return json(res, 400, {
         status: "error",
-        message: "Could not obtain Facebook user information"
+        message:
+          "Could not obtain Facebook user information"
       });
     }
+
+    /*
+     * =====================================================
+     * Success
+     * =====================================================
+     */
 
     return json(res, 200, {
       status: "success",
@@ -168,7 +232,8 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
 
     return json(res, 500, {
       status: "error",
-      message: "Facebook authentication failed"
+      message:
+        "Facebook authentication failed"
     });
   }
 }
@@ -181,8 +246,13 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
 
 module.exports = async (req, res) => {
   try {
-    const { path, searchParams } = getPath(req);
-    const method = req.method || "GET";
+    const {
+      path,
+      searchParams
+    } = getPath(req);
+
+    const method =
+      req.method || "GET";
 
     /*
      * =====================================================
@@ -299,12 +369,14 @@ module.exports = async (req, res) => {
         });
       }
 
-      const appId = process.env.FB_APP_ID;
+      const appId =
+        process.env.FB_APP_ID;
 
       if (!appId) {
         return json(res, 500, {
           status: "error",
-          message: "FB_APP_ID is not configured"
+          message:
+            "FB_APP_ID is not configured"
         });
       }
 
@@ -312,15 +384,28 @@ module.exports = async (req, res) => {
         process.env.FB_REDIRECT_URI ||
         `${BASE_URL}/auth/facebook/callback`;
 
-      const params = new URLSearchParams();
+      const params =
+        new URLSearchParams();
 
-      params.set("client_id", appId);
-      params.set("redirect_uri", redirectUri);
+      params.set(
+        "client_id",
+        appId
+      );
+
+      params.set(
+        "redirect_uri",
+        redirectUri
+      );
+
       params.set(
         "scope",
         "email,public_profile"
       );
-      params.set("response_type", "code");
+
+      params.set(
+        "response_type",
+        "code"
+      );
 
       return res.redirect(
         `https://www.facebook.com/v26.0/dialog/oauth?${params.toString()}`
@@ -333,7 +418,10 @@ module.exports = async (req, res) => {
      * =====================================================
      */
 
-    if (path === "/auth/facebook/callback") {
+    if (
+      path ===
+      "/auth/facebook/callback"
+    ) {
       if (method !== "GET") {
         return json(res, 405, {
           status: "error",
@@ -341,22 +429,27 @@ module.exports = async (req, res) => {
         });
       }
 
-      const error = searchParams.get("error");
+      const error =
+        searchParams.get("error");
 
       const errorDescription =
-        searchParams.get("error_description");
+        searchParams.get(
+          "error_description"
+        );
 
       if (error) {
         return json(res, 400, {
           status: "error",
-          message: "Facebook OAuth error",
+          message:
+            "Facebook OAuth error",
           error: error,
           description:
             errorDescription || null
         });
       }
 
-      const code = searchParams.get("code");
+      const code =
+        searchParams.get("code");
 
       if (!code) {
         return json(res, 400, {
@@ -374,20 +467,27 @@ module.exports = async (req, res) => {
 
     /*
      * =====================================================
-     * FACEBOOK EXCHANGE
+     * FACEBOOK TOKEN
      * =====================================================
      *
-     * This endpoint is for diagnosing the
-     * request format used by YOUR application.
+     * User-owned application endpoint.
      *
-     * We only return the names of received fields.
-     * We NEVER return their values.
+     * POST:
+     * /oauth/token/facebook
+     *
+     * Accepted fields:
+     * code
+     * authorization_code
+     * auth_code
+     *
+     * The actual authorization code is never
+     * returned in the response.
      * =====================================================
      */
 
     if (
-      path === "/oauth/token/facebook/exchange" ||
-      path === "/api/oauth/token/facebook/exchange"
+      path ===
+      "/oauth/token/facebook"
     ) {
       if (method !== "POST") {
         return json(res, 405, {
@@ -396,10 +496,12 @@ module.exports = async (req, res) => {
         });
       }
 
-      const body = await readBody(req);
+      const body =
+        await readBody(req);
 
       const receivedFields =
-        body && typeof body === "object"
+        body &&
+        typeof body === "object"
           ? Object.keys(body)
           : [];
 
@@ -408,17 +510,67 @@ module.exports = async (req, res) => {
         body?.authorization_code ||
         body?.auth_code;
 
-      /*
-       * IMPORTANT:
-       * Do not expose the actual value of the
-       * received fields or authorization code.
-       */
+      if (!code) {
+        return json(res, 400, {
+          error: "invalid_grant",
+          code: 2017,
+          received_fields:
+            receivedFields
+        });
+      }
+
+      return exchangeFacebookCode(
+        code,
+        res
+      );
+    }
+
+    /*
+     * =====================================================
+     * FACEBOOK EXCHANGE
+     * =====================================================
+     *
+     * POST:
+     * /oauth/token/facebook/exchange
+     *
+     * POST:
+     * /api/oauth/token/facebook/exchange
+     * =====================================================
+     */
+
+    if (
+      path ===
+        "/oauth/token/facebook/exchange" ||
+      path ===
+        "/api/oauth/token/facebook/exchange"
+    ) {
+      if (method !== "POST") {
+        return json(res, 405, {
+          status: "error",
+          message: "Method Not Allowed"
+        });
+      }
+
+      const body =
+        await readBody(req);
+
+      const receivedFields =
+        body &&
+        typeof body === "object"
+          ? Object.keys(body)
+          : [];
+
+      const code =
+        body?.code ||
+        body?.authorization_code ||
+        body?.auth_code;
 
       if (!code) {
         return json(res, 400, {
           error: "invalid_grant",
           code: 2017,
-          received_fields: receivedFields
+          received_fields:
+            receivedFields
         });
       }
 
@@ -435,8 +587,10 @@ module.exports = async (req, res) => {
      */
 
     if (
-      path === "/auth/facebook/exchange" ||
-      path === "/api/auth/facebook/exchange"
+      path ===
+        "/auth/facebook/exchange" ||
+      path ===
+        "/api/auth/facebook/exchange"
     ) {
       if (method !== "POST") {
         return json(res, 405, {
@@ -445,7 +599,8 @@ module.exports = async (req, res) => {
         });
       }
 
-      const body = await readBody(req);
+      const body =
+        await readBody(req);
 
       const code =
         body?.code ||
@@ -458,7 +613,8 @@ module.exports = async (req, res) => {
           message:
             "Facebook authorization code is required",
           received_fields:
-            body && typeof body === "object"
+            body &&
+            typeof body === "object"
               ? Object.keys(body)
               : []
         });
@@ -478,7 +634,8 @@ module.exports = async (req, res) => {
 
     return json(res, 404, {
       status: 404,
-      message: "Endpoint not found",
+      message:
+        "Endpoint not found",
       path: path
     });
 
@@ -492,7 +649,8 @@ module.exports = async (req, res) => {
 
     return json(res, 500, {
       status: "error",
-      message: "Internal server error"
+      message:
+        "Internal server error"
     });
   }
 };
