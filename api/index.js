@@ -17,11 +17,12 @@ function getPath(req) {
   try {
     const host = req.headers?.host || "gconectn10.vercel.app";
     const url = new URL(req.url || "/", `https://${host}`);
+
     return {
       path: url.pathname,
       searchParams: url.searchParams
     };
-  } catch (error) {
+  } catch {
     return {
       path: "/",
       searchParams: new URLSearchParams()
@@ -30,7 +31,6 @@ function getPath(req) {
 }
 
 async function readBody(req) {
-  // Vercel may already parse JSON body
   if (req.body && typeof req.body === "object") {
     return req.body;
   }
@@ -41,7 +41,7 @@ async function readBody(req) {
     for await (const chunk of req) {
       raw += chunk.toString();
     }
-  } catch (error) {
+  } catch {
     return {};
   }
 
@@ -52,7 +52,6 @@ async function readBody(req) {
   try {
     return JSON.parse(raw);
   } catch {
-    // Support application/x-www-form-urlencoded
     try {
       const params = new URLSearchParams(raw);
       return Object.fromEntries(params.entries());
@@ -87,12 +86,6 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
     `${BASE_URL}/auth/facebook/callback`;
 
   try {
-    /*
-     * -------------------------------------------------------
-     * 1. Exchange Facebook authorization code
-     * -------------------------------------------------------
-     */
-
     const tokenUrl = new URL(
       `${FACEBOOK_API}/oauth/access_token`
     );
@@ -103,10 +96,9 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
     tokenUrl.searchParams.set("code", code);
 
     const tokenResponse = await fetch(tokenUrl.toString());
-
     const tokenText = await tokenResponse.text();
 
-    let tokenData;
+    let tokenData = {};
 
     try {
       tokenData = JSON.parse(tokenText);
@@ -115,19 +107,18 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
     }
 
     if (!tokenResponse.ok || !tokenData.access_token) {
-      console.error("FACEBOOK TOKEN ERROR:", tokenData);
+      console.error("FACEBOOK TOKEN ERROR:", {
+        status: tokenResponse.status,
+        error: tokenData?.error || null,
+        error_type: tokenData?.error?.type || null,
+        error_code: tokenData?.error?.code || null
+      });
 
       return json(res, 400, {
         status: "error",
         message: "Invalid Facebook authorization code"
       });
     }
-
-    /*
-     * -------------------------------------------------------
-     * 2. Get Facebook user information
-     * -------------------------------------------------------
-     */
 
     const userUrl = new URL(`${FACEBOOK_API}/me`);
 
@@ -142,10 +133,9 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
     );
 
     const userResponse = await fetch(userUrl.toString());
-
     const userText = await userResponse.text();
 
-    let userData;
+    let userData = {};
 
     try {
       userData = JSON.parse(userText);
@@ -154,21 +144,16 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
     }
 
     if (!userResponse.ok || !userData.id) {
-      console.error("FACEBOOK USER ERROR:", userData);
+      console.error("FACEBOOK USER ERROR:", {
+        status: userResponse.status,
+        error: userData?.error || null
+      });
 
       return json(res, 400, {
         status: "error",
         message: "Could not obtain Facebook user information"
       });
     }
-
-    /*
-     * -------------------------------------------------------
-     * 3. Return our application's result
-     * -------------------------------------------------------
-     *
-     * Do NOT return the Facebook access token to the client.
-     */
 
     return json(res, 200, {
       status: "success",
@@ -197,6 +182,7 @@ async function exchangeFacebookCode(code, res, redirectUriOverride) {
 module.exports = async (req, res) => {
   try {
     const { path, searchParams } = getPath(req);
+    const method = req.method || "GET";
 
     /*
      * =====================================================
@@ -204,12 +190,17 @@ module.exports = async (req, res) => {
      * =====================================================
      */
 
-    if (req.method === "OPTIONS") {
-      res.setHeader("Access-Control-Allow-Origin", "*");
+    if (method === "OPTIONS") {
+      res.setHeader(
+        "Access-Control-Allow-Origin",
+        "*"
+      );
+
       res.setHeader(
         "Access-Control-Allow-Methods",
         "GET,POST,OPTIONS"
       );
+
       res.setHeader(
         "Access-Control-Allow-Headers",
         "Content-Type, Authorization"
@@ -301,7 +292,7 @@ module.exports = async (req, res) => {
      */
 
     if (path === "/auth/facebook") {
-      if (req.method !== "GET") {
+      if (method !== "GET") {
         return json(res, 405, {
           status: "error",
           message: "Method Not Allowed"
@@ -325,7 +316,10 @@ module.exports = async (req, res) => {
 
       params.set("client_id", appId);
       params.set("redirect_uri", redirectUri);
-      params.set("scope", "email,public_profile");
+      params.set(
+        "scope",
+        "email,public_profile"
+      );
       params.set("response_type", "code");
 
       return res.redirect(
@@ -340,7 +334,7 @@ module.exports = async (req, res) => {
      */
 
     if (path === "/auth/facebook/callback") {
-      if (req.method !== "GET") {
+      if (method !== "GET") {
         return json(res, 405, {
           status: "error",
           message: "Method Not Allowed"
@@ -348,6 +342,7 @@ module.exports = async (req, res) => {
       }
 
       const error = searchParams.get("error");
+
       const errorDescription =
         searchParams.get("error_description");
 
@@ -356,7 +351,8 @@ module.exports = async (req, res) => {
           status: "error",
           message: "Facebook OAuth error",
           error: error,
-          description: errorDescription || null
+          description:
+            errorDescription || null
         });
       }
 
@@ -365,31 +361,27 @@ module.exports = async (req, res) => {
       if (!code) {
         return json(res, 400, {
           status: "error",
-          message: "No Facebook authorization code"
+          message:
+            "No Facebook authorization code"
         });
       }
 
-      return exchangeFacebookCode(code, res);
+      return exchangeFacebookCode(
+        code,
+        res
+      );
     }
 
     /*
      * =====================================================
-     * OUR FACEBOOK EXCHANGE ENDPOINT
+     * FACEBOOK EXCHANGE
      * =====================================================
      *
-     * POST:
+     * This endpoint is for diagnosing the
+     * request format used by YOUR application.
      *
-     * /oauth/token/facebook/exchange
-     *
-     * Body:
-     * {
-     *   "code": "FACEBOOK_AUTHORIZATION_CODE"
-     * }
-     *
-     * Also accepts:
-     *
-     * /api/oauth/token/facebook/exchange
-     *
+     * We only return the names of received fields.
+     * We NEVER return their values.
      * =====================================================
      */
 
@@ -397,7 +389,7 @@ module.exports = async (req, res) => {
       path === "/oauth/token/facebook/exchange" ||
       path === "/api/oauth/token/facebook/exchange"
     ) {
-      if (req.method !== "POST") {
+      if (method !== "POST") {
         return json(res, 405, {
           status: "error",
           message: "Method Not Allowed"
@@ -406,24 +398,39 @@ module.exports = async (req, res) => {
 
       const body = await readBody(req);
 
+      const receivedFields =
+        body && typeof body === "object"
+          ? Object.keys(body)
+          : [];
+
       const code =
         body?.code ||
         body?.authorization_code ||
         body?.auth_code;
 
+      /*
+       * IMPORTANT:
+       * Do not expose the actual value of the
+       * received fields or authorization code.
+       */
+
       if (!code) {
         return json(res, 400, {
           error: "invalid_grant",
-          code: 2017
+          code: 2017,
+          received_fields: receivedFields
         });
       }
 
-      return exchangeFacebookCode(code, res);
+      return exchangeFacebookCode(
+        code,
+        res
+      );
     }
 
     /*
      * =====================================================
-     * OUR ALTERNATIVE FACEBOOK EXCHANGE
+     * ALTERNATIVE FACEBOOK EXCHANGE
      * =====================================================
      */
 
@@ -431,7 +438,7 @@ module.exports = async (req, res) => {
       path === "/auth/facebook/exchange" ||
       path === "/api/auth/facebook/exchange"
     ) {
-      if (req.method !== "POST") {
+      if (method !== "POST") {
         return json(res, 405, {
           status: "error",
           message: "Method Not Allowed"
@@ -448,11 +455,19 @@ module.exports = async (req, res) => {
       if (!code) {
         return json(res, 400, {
           status: "error",
-          message: "Facebook authorization code is required"
+          message:
+            "Facebook authorization code is required",
+          received_fields:
+            body && typeof body === "object"
+              ? Object.keys(body)
+              : []
         });
       }
 
-      return exchangeFacebookCode(code, res);
+      return exchangeFacebookCode(
+        code,
+        res
+      );
     }
 
     /*
@@ -468,14 +483,11 @@ module.exports = async (req, res) => {
     });
 
   } catch (error) {
-    /*
-     * Never allow an unexpected exception to crash
-     * the whole Vercel function without JSON response.
-     */
-
     console.error(
       "FUNCTION ERROR:",
-      error?.stack || error?.message || error
+      error?.stack ||
+      error?.message ||
+      error
     );
 
     return json(res, 500, {
