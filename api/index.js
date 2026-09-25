@@ -228,17 +228,6 @@ async function exchangeFacebookCode(
  * =========================================================
  * Facebook Access Token Validation
  * =========================================================
- *
- * The application sends:
- *
- * client_id
- * client_secret
- * facebook_access_token
- *
- * The client_secret is NOT trusted.
- *
- * The real FB_APP_SECRET remains on Vercel.
- * =========================================================
  */
 
 async function exchangeFacebookAccessToken(
@@ -264,16 +253,6 @@ async function exchangeFacebookAccessToken(
     });
   }
 
-  /*
-   * IMPORTANT:
-   *
-   * We intentionally DO NOT compare clientId
-   * with FB_APP_ID here.
-   *
-   * The actual Facebook access token is verified
-   * against our App ID using debug_token below.
-   */
-
   if (!facebookAccessToken) {
     return json(res, 400, {
       error:
@@ -285,12 +264,6 @@ async function exchangeFacebookAccessToken(
   }
 
   try {
-    /*
-     * =====================================================
-     * Facebook debug_token
-     * =====================================================
-     */
-
     const debugUrl =
       new URL(
         `${FACEBOOK_API}/debug_token`
@@ -300,14 +273,6 @@ async function exchangeFacebookAccessToken(
       "input_token",
       facebookAccessToken
     );
-
-    /*
-     * App access token:
-     *
-     * app_id|app_secret
-     *
-     * This value NEVER gets returned to the client.
-     */
 
     const appAccessToken =
       `${appId}|${appSecret}`;
@@ -334,12 +299,6 @@ async function exchangeFacebookAccessToken(
       debugData = {};
     }
 
-    /*
-     * SAFE LOG
-     *
-     * Never log access_token or app_secret.
-     */
-
     console.log(
       "FACEBOOK DEBUG RESULT:",
       {
@@ -358,12 +317,6 @@ async function exchangeFacebookAccessToken(
       }
     );
 
-    /*
-     * =====================================================
-     * Invalid token
-     * =====================================================
-     */
-
     if (
       !debugResponse.ok ||
       debugData?.data?.is_valid !== true
@@ -376,12 +329,6 @@ async function exchangeFacebookAccessToken(
           "Facebook access token is invalid"
       });
     }
-
-    /*
-     * =====================================================
-     * Verify token belongs to our Facebook App
-     * =====================================================
-     */
 
     const tokenAppId =
       debugData?.data?.app_id;
@@ -398,12 +345,6 @@ async function exchangeFacebookAccessToken(
           "Facebook access token belongs to another app"
       });
     }
-
-    /*
-     * =====================================================
-     * Get Facebook user
-     * =====================================================
-     */
 
     return getFacebookUser(
       facebookAccessToken,
@@ -493,12 +434,6 @@ async function getFacebookUser(
           "Could not obtain Facebook user information"
       });
     }
-
-    /*
-     * =====================================================
-     * Success
-     * =====================================================
-     */
 
     return json(res, 200, {
       status: "success",
@@ -603,7 +538,7 @@ module.exports = async (
      * =====================================================
      * APP INFO
      * =====================================================
-     */
+ */
 
     if (
       path === "/app/info/get"
@@ -793,17 +728,6 @@ module.exports = async (
      * =====================================================
      * FACEBOOK TOKEN
      * =====================================================
-     *
-     * POST:
-     * /oauth/token/facebook
-     *
-     * Supports:
-     *
-     * code
-     * authorization_code
-     * auth_code
-     * facebook_access_token
-     * =====================================================
      */
 
     if (
@@ -838,10 +762,6 @@ module.exports = async (
         }
       );
 
-      /*
-       * Authorization code
-       */
-
       const code =
         body?.code ||
         body?.authorization_code ||
@@ -853,10 +773,6 @@ module.exports = async (
           res
         );
       }
-
-      /*
-       * Facebook access token
-       */
 
       const facebookAccessToken =
         body?.facebook_access_token;
@@ -889,13 +805,6 @@ module.exports = async (
     /*
      * =====================================================
      * FACEBOOK TOKEN EXCHANGE
-     * =====================================================
-     *
-     * POST:
-     * /oauth/token/facebook/exchange
-     *
-     * POST:
-     * /api/oauth/token/facebook/exchange
      * =====================================================
      */
 
@@ -933,10 +842,6 @@ module.exports = async (
         }
       );
 
-      /*
-       * Authorization code
-       */
-
       const code =
         body?.code ||
         body?.authorization_code ||
@@ -948,10 +853,6 @@ module.exports = async (
           res
         );
       }
-
-      /*
-       * Facebook access token
-       */
 
       const facebookAccessToken =
         body?.facebook_access_token;
@@ -1021,10 +922,6 @@ module.exports = async (
         }
       );
 
-      /*
-       * Authorization code
-       */
-
       const code =
         body?.code ||
         body?.authorization_code ||
@@ -1036,10 +933,6 @@ module.exports = async (
           res
         );
       }
-
-      /*
-       * Access token
-       */
 
       const facebookAccessToken =
         body?.facebook_access_token;
@@ -1065,6 +958,32 @@ module.exports = async (
 
         received_fields:
           receivedFields
+      });
+    }
+
+    /*
+     * =====================================================
+     * TEMPORARY N10 TEST SERVER
+     * =====================================================
+     *
+     * This is only a local test endpoint
+     * for our own backend.
+     */
+
+    if (
+      path === "/test-server"
+    ) {
+      return json(res, 200, {
+        status: "ok",
+
+        server:
+          "N10 TEST SERVER",
+
+        temporary:
+          true,
+
+        message:
+          "Test server is working"
       });
     }
 
