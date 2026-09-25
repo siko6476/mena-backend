@@ -9,9 +9,25 @@ const FACEBOOK_API = "https://graph.facebook.com/v26.0";
 
 function json(res, status, data) {
   res.status(status);
+
   res.setHeader(
     "Content-Type",
     "application/json; charset=utf-8"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,OPTIONS"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
   );
 
   return res.end(
@@ -37,8 +53,7 @@ function getPath(req) {
   } catch {
     return {
       path: "/",
-      searchParams:
-        new URLSearchParams()
+      searchParams: new URLSearchParams()
     };
   }
 }
@@ -116,12 +131,6 @@ async function exchangeFacebookCode(
     `${BASE_URL}/auth/facebook/callback`;
 
   try {
-    /*
-     * =====================================================
-     * Exchange authorization code
-     * =====================================================
-     */
-
     const tokenUrl =
       new URL(
         `${FACEBOOK_API}/oauth/access_token`
@@ -195,10 +204,6 @@ async function exchangeFacebookCode(
       });
     }
 
-    /*
-     * Get Facebook user
-     */
-
     return getFacebookUser(
       tokenData.access_token,
       res
@@ -224,15 +229,15 @@ async function exchangeFacebookCode(
  * Facebook Access Token Validation
  * =========================================================
  *
- * This is used when the application sends:
+ * The application sends:
  *
  * client_id
  * client_secret
  * facebook_access_token
  *
- * The client_secret value is NEVER trusted.
+ * The client_secret is NOT trusted.
  *
- * The real FB_APP_SECRET comes from Vercel.
+ * The real FB_APP_SECRET remains on Vercel.
  * =========================================================
  */
 
@@ -260,32 +265,30 @@ async function exchangeFacebookAccessToken(
   }
 
   /*
-   * =====================================================
-   * Verify client_id
-   * =====================================================
+   * IMPORTANT:
+   *
+   * We intentionally DO NOT compare clientId
+   * with FB_APP_ID here.
+   *
+   * The actual Facebook access token is verified
+   * against our App ID using debug_token below.
    */
 
-  if (
-    !clientId ||
-    String(clientId) !==
-      String(appId)
-  ) {
-    return json(res, 401, {
+  if (!facebookAccessToken) {
+    return json(res, 400, {
       error:
-        "invalid_client",
+        "invalid_grant",
+
       message:
-        "Invalid Facebook client_id"
+        "facebook_access_token is required"
     });
   }
 
   try {
     /*
-     * ===================================================
-     * Debug Facebook access token
-     * ===================================================
-     *
-     * IMPORTANT:
-     * The App Secret stays on the server.
+     * =====================================================
+     * Facebook debug_token
+     * =====================================================
      */
 
     const debugUrl =
@@ -297,6 +300,14 @@ async function exchangeFacebookAccessToken(
       "input_token",
       facebookAccessToken
     );
+
+    /*
+     * App access token:
+     *
+     * app_id|app_secret
+     *
+     * This value NEVER gets returned to the client.
+     */
 
     const appAccessToken =
       `${appId}|${appSecret}`;
@@ -324,37 +335,52 @@ async function exchangeFacebookAccessToken(
     }
 
     /*
+     * SAFE LOG
+     *
+     * Never log access_token or app_secret.
+     */
+
+    console.log(
+      "FACEBOOK DEBUG RESULT:",
+      {
+        http_status:
+          debugResponse.status,
+
+        is_valid:
+          debugData?.data?.is_valid === true,
+
+        token_app_id:
+          debugData?.data?.app_id ||
+          null,
+
+        expected_app_id:
+          appId
+      }
+    );
+
+    /*
+     * =====================================================
      * Invalid token
+     * =====================================================
      */
 
     if (
       !debugResponse.ok ||
-      !debugData?.data?.is_valid
+      debugData?.data?.is_valid !== true
     ) {
-      console.error(
-        "FACEBOOK TOKEN VALIDATION FAILED:",
-        {
-          status:
-            debugResponse.status,
-
-          error:
-            debugData?.error ||
-            null
-        }
-      );
-
       return json(res, 401, {
         error:
           "invalid_token",
+
         message:
           "Facebook access token is invalid"
       });
     }
 
     /*
-     * ===================================================
-     * Make sure token belongs to our Facebook App
-     * ===================================================
+     * =====================================================
+     * Verify token belongs to our Facebook App
+     * =====================================================
      */
 
     const tokenAppId =
@@ -367,15 +393,16 @@ async function exchangeFacebookAccessToken(
       return json(res, 401, {
         error:
           "invalid_token",
+
         message:
           "Facebook access token belongs to another app"
       });
     }
 
     /*
-     * ===================================================
+     * =====================================================
      * Get Facebook user
-     * ===================================================
+     * =====================================================
      */
 
     return getFacebookUser(
@@ -392,6 +419,7 @@ async function exchangeFacebookAccessToken(
 
     return json(res, 500, {
       status: "error",
+
       message:
         "Facebook authentication failed"
     });
@@ -460,19 +488,21 @@ async function getFacebookUser(
       return json(res, 401, {
         error:
           "invalid_token",
+
         message:
           "Could not obtain Facebook user information"
       });
     }
 
     /*
-     * ===================================================
+     * =====================================================
      * Success
-     * ===================================================
+     * =====================================================
      */
 
     return json(res, 200, {
       status: "success",
+
       user: userData
     });
 
@@ -485,6 +515,7 @@ async function getFacebookUser(
 
     return json(res, 500, {
       status: "error",
+
       message:
         "Could not obtain Facebook user information"
     });
@@ -655,6 +686,7 @@ module.exports = async (
       if (!appId) {
         return json(res, 500, {
           status: "error",
+
           message:
             "FB_APP_ID is not configured"
         });
@@ -705,6 +737,7 @@ module.exports = async (
       if (method !== "GET") {
         return json(res, 405, {
           status: "error",
+
           message:
             "Method Not Allowed"
         });
@@ -723,6 +756,7 @@ module.exports = async (
       if (error) {
         return json(res, 400, {
           status: "error",
+
           message:
             "Facebook OAuth error",
 
@@ -743,6 +777,7 @@ module.exports = async (
       if (!code) {
         return json(res, 400, {
           status: "error",
+
           message:
             "No Facebook authorization code"
         });
@@ -764,13 +799,10 @@ module.exports = async (
      *
      * Supports:
      *
-     * 1. code
-     * 2. authorization_code
-     * 3. auth_code
-     * 4. facebook_access_token
-     *
-     * client_secret sent by the client is ignored.
-     * The real secret remains in Vercel.
+     * code
+     * authorization_code
+     * auth_code
+     * facebook_access_token
      * =====================================================
      */
 
@@ -781,6 +813,7 @@ module.exports = async (
       if (method !== "POST") {
         return json(res, 405, {
           status: "error",
+
           message:
             "Method Not Allowed"
         });
@@ -841,10 +874,6 @@ module.exports = async (
         );
       }
 
-      /*
-       * No supported credential
-       */
-
       return json(res, 400, {
         error:
           "invalid_grant",
@@ -867,13 +896,6 @@ module.exports = async (
      *
      * POST:
      * /api/oauth/token/facebook/exchange
-     *
-     * Supports:
-     *
-     * - client_id
-     * - facebook_access_token
-     *
-     * client_secret from the client is ignored.
      * =====================================================
      */
 
@@ -886,6 +908,7 @@ module.exports = async (
       if (method !== "POST") {
         return json(res, 405, {
           status: "error",
+
           message:
             "Method Not Allowed"
         });
@@ -900,13 +923,6 @@ module.exports = async (
           ? Object.keys(body)
           : [];
 
-      /*
-       * SAFE DEBUG LOG
-       *
-       * Only field names are logged.
-       * Values are NEVER logged.
-       */
-
       console.log(
         "FACEBOOK EXCHANGE REQUEST:",
         {
@@ -918,9 +934,7 @@ module.exports = async (
       );
 
       /*
-       * ===================================================
        * Authorization code
-       * ===================================================
        */
 
       const code =
@@ -936,9 +950,7 @@ module.exports = async (
       }
 
       /*
-       * ===================================================
        * Facebook access token
-       * ===================================================
        */
 
       const facebookAccessToken =
@@ -956,12 +968,6 @@ module.exports = async (
           res
         );
       }
-
-      /*
-       * ===================================================
-       * No supported credential
-       * ===================================================
-       */
 
       return json(res, 400, {
         error:
@@ -990,6 +996,7 @@ module.exports = async (
       if (method !== "POST") {
         return json(res, 405, {
           status: "error",
+
           message:
             "Method Not Allowed"
         });
