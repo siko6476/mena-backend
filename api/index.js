@@ -1,9 +1,9 @@
 module.exports = async (req, res) => {
-  const BASE_URL = "https://gconn10.vercel.app";
+  const BASE_URL = "https://gconectn10.vercel.app";
 
   const url = new URL(
     req.url,
-    `https://${req.headers.host || "gconn10.vercel.app"}`
+    `https://${req.headers.host || "gconectn10.vercel.app"}`
   );
 
   const path = url.pathname;
@@ -92,7 +92,6 @@ module.exports = async (req, res) => {
   if (path === "/auth/facebook/callback") {
     const code = url.searchParams.get("code");
 
-    // Facebook OAuth error
     const fbError = url.searchParams.get("error");
     const fbErrorDescription =
       url.searchParams.get("error_description");
@@ -111,7 +110,6 @@ module.exports = async (req, res) => {
       });
     }
 
-    // لا يوجد authorization code
     if (!code) {
       return res.status(400).json({
         status: "error",
@@ -119,112 +117,61 @@ module.exports = async (req, res) => {
       });
     }
 
-    const appId = process.env.FB_APP_ID;
-    const appSecret = process.env.FB_APP_SECRET;
+    return exchangeFacebookCode(code, res);
+  }
 
-    if (!appId || !appSecret) {
-      return res.status(500).json({
+  // ==================================================
+  // OAuth Exchange خاص بمشروعنا
+  // ==================================================
+  // لا يحاكي بروتوكول طرف ثالث.
+  //
+  // الاستخدام:
+  // POST /api/auth/facebook/exchange
+  // body:
+  // {
+  //   "code": "FACEBOOK_AUTHORIZATION_CODE"
+  // }
+  //
+  // ==================================================
+  if (
+    path === "/api/auth/facebook/exchange" ||
+    path === "/auth/facebook/exchange"
+  ) {
+    if (req.method !== "POST") {
+      return res.status(405).json({
         status: "error",
-        message: "Facebook environment variables are missing"
+        message: "Method Not Allowed"
       });
     }
 
-    const redirectUri =
-      process.env.FB_REDIRECT_URI ||
-      `${BASE_URL}/auth/facebook/callback`;
-
     try {
-      // =========================
-      // تحويل code إلى Access Token
-      // =========================
-      const tokenUrl = new URL(
-        "https://graph.facebook.com/v26.0/oauth/access_token"
-      );
+      let body = req.body;
 
-      tokenUrl.searchParams.set(
-        "client_id",
-        appId
-      );
+      if (typeof body === "string") {
+        try {
+          body = JSON.parse(body);
+        } catch {
+          body = {};
+        }
+      }
 
-      tokenUrl.searchParams.set(
-        "client_secret",
-        appSecret
-      );
+      const code = body?.code;
 
-      tokenUrl.searchParams.set(
-        "redirect_uri",
-        redirectUri
-      );
-
-      tokenUrl.searchParams.set(
-        "code",
-        code
-      );
-
-      const tokenResponse = await fetch(tokenUrl);
-      const tokenData = await tokenResponse.json();
-
-      if (!tokenResponse.ok || !tokenData.access_token) {
-        console.error(
-          "FACEBOOK TOKEN ERROR:",
-          tokenData
-        );
-
-        return res.status(500).json({
+      if (!code) {
+        return res.status(400).json({
           status: "error",
-          message: "Could not obtain Facebook access token"
+          message: "Facebook authorization code is required"
         });
       }
 
-      // =========================
-      // جلب معلومات المستخدم
-      // =========================
-      const userUrl = new URL(
-        "https://graph.facebook.com/v26.0/me"
-      );
-
-      userUrl.searchParams.set(
-        "fields",
-        "id,name,email"
-      );
-
-      userUrl.searchParams.set(
-        "access_token",
-        tokenData.access_token
-      );
-
-      const userResponse = await fetch(userUrl);
-      const userData = await userResponse.json();
-
-      if (!userResponse.ok) {
-        console.error(
-          "FACEBOOK USER ERROR:",
-          userData
-        );
-
-        return res.status(500).json({
-          status: "error",
-          message: "Could not obtain Facebook user information"
-        });
-      }
-
-      // =========================
-      // نجاح تسجيل الدخول
-      // =========================
-      return res.status(200).json({
-        status: "success",
-        user: userData
-      });
+      return exchangeFacebookCode(code, res);
 
     } catch (error) {
-      console.error(
-        "FACEBOOK ERROR:",
-        error
-      );
+      console.error("FACEBOOK EXCHANGE ERROR:", error);
 
       return res.status(500).json({
         status: "error",
-        message: "Facebook authentication failed"
+        message: "Facebook code exchange failed"
       });
     }
   }
@@ -237,3 +184,124 @@ module.exports = async (req, res) => {
     message: "Endpoint not found"
   });
 };
+
+
+// ==================================================
+// Facebook OAuth Code Exchange
+// ==================================================
+
+async function exchangeFacebookCode(code, res) {
+  const BASE_URL = "https://gconectn10.vercel.app";
+
+  const appId = process.env.FB_APP_ID;
+  const appSecret = process.env.FB_APP_SECRET;
+
+  if (!appId || !appSecret) {
+    return res.status(500).json({
+      status: "error",
+      message: "Facebook environment variables are missing"
+    });
+  }
+
+  const redirectUri =
+    process.env.FB_REDIRECT_URI ||
+    `${BASE_URL}/auth/facebook/callback`;
+
+  try {
+    // =========================
+    // تحويل Facebook code إلى Access Token
+    // =========================
+
+    const tokenUrl = new URL(
+      "https://graph.facebook.com/v26.0/oauth/access_token"
+    );
+
+    tokenUrl.searchParams.set(
+      "client_id",
+      appId
+    );
+
+    tokenUrl.searchParams.set(
+      "client_secret",
+      appSecret
+    );
+
+    tokenUrl.searchParams.set(
+      "redirect_uri",
+      redirectUri
+    );
+
+    tokenUrl.searchParams.set(
+      "code",
+      code
+    );
+
+    const tokenResponse = await fetch(tokenUrl);
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenResponse.ok || !tokenData.access_token) {
+      console.error(
+        "FACEBOOK TOKEN ERROR:",
+        tokenData
+      );
+
+      return res.status(400).json({
+        status: "error",
+        message: "Could not obtain Facebook access token"
+      });
+    }
+
+    // =========================
+    // جلب معلومات المستخدم
+    // =========================
+
+    const userUrl = new URL(
+      "https://graph.facebook.com/v26.0/me"
+    );
+
+    userUrl.searchParams.set(
+      "fields",
+      "id,name,email"
+    );
+
+    userUrl.searchParams.set(
+      "access_token",
+      tokenData.access_token
+    );
+
+    const userResponse = await fetch(userUrl);
+    const userData = await userResponse.json();
+
+    if (!userResponse.ok) {
+      console.error(
+        "FACEBOOK USER ERROR:",
+        userData
+      );
+
+      return res.status(400).json({
+        status: "error",
+        message: "Could not obtain Facebook user information"
+      });
+    }
+
+    // =========================
+    // نجاح
+    // =========================
+
+    return res.status(200).json({
+      status: "success",
+      user: userData
+    });
+
+  } catch (error) {
+    console.error(
+      "FACEBOOK ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      status: "error",
+      message: "Facebook authentication failed"
+    });
+  }
+}
