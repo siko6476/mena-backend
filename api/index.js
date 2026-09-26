@@ -1,8 +1,11 @@
 const BASE_URL = "https://gconectn10.vercel.app";
 const FACEBOOK_API = "https://graph.facebook.com/v26.0";
 
-// External CDN link
-const EXTERNAL_CDN_URL = "http://dl.dir.freefiremobile.com";
+// External CDN links
+const EXTERNAL_CDN_URLS = [
+  "http://dl.dir.freefiremobile.com",
+  "http://cdn.wildflamestudio.com"
+];
 
 /*
  * =========================================================
@@ -601,11 +604,11 @@ module.exports = async (
 
     /*
      * =====================================================
-     * EXTERNAL CDN LINK
+     * EXTERNAL CDN LINKS
      * =====================================================
      *
-     * This endpoint only returns the external URL.
-     * It does NOT proxy or mirror external files.
+     * These are external URLs only.
+     * The server does NOT proxy or mirror them.
      */
 
     if (
@@ -614,8 +617,8 @@ module.exports = async (
       return json(res, 200, {
         status: "ok",
 
-        external_url:
-          EXTERNAL_CDN_URL
+        external_urls:
+          EXTERNAL_CDN_URLS
       });
     }
 
