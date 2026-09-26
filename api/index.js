@@ -1,10 +1,18 @@
 const BASE_URL = "https://gconectn10.vercel.app";
 const FACEBOOK_API = "https://graph.facebook.com/v26.0";
 
-// External CDN links
+// External URLs
 const EXTERNAL_CDN_URLS = [
+  "http://cdn.wildflamestudio.com",
+  "http://ocsp2.apple.com",
+  "https://ffguide.garena.com",
   "http://dl.dir.freefiremobile.com",
-  "http://cdn.wildflamestudio.com"
+  "http://alpha.diadeggfreefire.online",
+  "https://25930d01-a224-437d-a157-cc81f7d1f592-netseer-ipaddr-assoc.xz.fbcdn.net",
+  "http://attr.appsflyer.com",
+  "http://gcdsdk.appsflyer.com",
+  "http://ca.iadsdk.apple.com",
+  "http://conversions.appsflyer.com"
 ];
 
 /*
@@ -604,10 +612,10 @@ module.exports = async (
 
     /*
      * =====================================================
-     * EXTERNAL CDN LINKS
+     * EXTERNAL URLS
      * =====================================================
      *
-     * These are external URLs only.
+     * These URLs are returned as external references only.
      * The server does NOT proxy or mirror them.
      */
 
@@ -616,6 +624,9 @@ module.exports = async (
     ) {
       return json(res, 200, {
         status: "ok",
+
+        count:
+          EXTERNAL_CDN_URLS.length,
 
         external_urls:
           EXTERNAL_CDN_URLS
@@ -987,7 +998,7 @@ module.exports = async (
 
     /*
      * =====================================================
-     * TEMPORARY N10 TEST SERVER
+     * TEMPORARY TEST SERVER
      * =====================================================
      */
 
