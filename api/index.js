@@ -1,7 +1,6 @@
 const BASE_URL = "https://gconectn10.vercel.app";
 const FACEBOOK_API = "https://graph.facebook.com/v26.0";
 
-// External URLs
 const EXTERNAL_CDN_URLS = [
   "http://cdn.wildflamestudio.com",
   "http://ocsp2.apple.com",
@@ -17,7 +16,7 @@ const EXTERNAL_CDN_URLS = [
 
 /*
  * =========================================================
- * Helpers
+ * HELPERS
  * =========================================================
  */
 
@@ -110,7 +109,7 @@ async function readBody(req) {
 
 /*
  * =========================================================
- * Facebook Authorization Code Exchange
+ * FACEBOOK AUTHORIZATION CODE EXCHANGE
  * =========================================================
  */
 
@@ -238,7 +237,7 @@ async function exchangeFacebookCode(
 
 /*
  * =========================================================
- * Facebook Access Token Validation
+ * FACEBOOK ACCESS TOKEN VALIDATION
  * =========================================================
  */
 
@@ -381,7 +380,7 @@ async function exchangeFacebookAccessToken(
 
 /*
  * =========================================================
- * Get Facebook User
+ * GET FACEBOOK USER
  * =========================================================
  */
 
@@ -471,7 +470,7 @@ async function getFacebookUser(
 
 /*
  * =========================================================
- * Main Vercel Function
+ * MAIN VERCEL FUNCTION
  * =========================================================
  */
 
@@ -548,6 +547,33 @@ module.exports = async (
 
     /*
      * =====================================================
+     * APP
+     * =====================================================
+     */
+
+    if (
+      path === "/app"
+    ) {
+      return json(res, 200, {
+        supports_implicit_sdk_logging:
+          true,
+
+        ios_dialog_configs:
+          {},
+
+        ios_sdk_dialog_flows:
+          {},
+
+        ios_sdk_error_categories:
+          [],
+
+        id:
+          "app"
+      });
+    }
+
+    /*
+     * =====================================================
      * APP INFO
      * =====================================================
      */
@@ -579,19 +605,26 @@ module.exports = async (
         gdpv4_nux_enabled:
           false,
 
-        gdpv4_nux_content: {},
+        gdpv4_nux_content:
+          {},
 
-        android_dialog_configs: {},
+        android_dialog_configs:
+          {},
 
-        android_sdk_error_categories: [],
+        android_sdk_error_categories:
+          [],
 
-        ios_dialog_configs: {},
+        ios_dialog_configs:
+          {},
 
-        ios_sdk_dialog_flows: {},
+        ios_sdk_dialog_flows:
+          {},
 
-        ios_sdk_error_categories: [],
+        ios_sdk_error_categories:
+          [],
 
-        id: "feedback"
+        id:
+          "feedback"
       });
     }
 
@@ -614,9 +647,6 @@ module.exports = async (
      * =====================================================
      * EXTERNAL URLS
      * =====================================================
-     *
-     * These URLs are returned as external references only.
-     * The server does NOT proxy or mirror them.
      */
 
     if (
@@ -645,6 +675,7 @@ module.exports = async (
       if (method !== "GET") {
         return json(res, 405, {
           status: "error",
+
           message:
             "Method Not Allowed"
         });
@@ -998,7 +1029,7 @@ module.exports = async (
 
     /*
      * =====================================================
-     * TEMPORARY TEST SERVER
+     * TEST SERVER
      * =====================================================
      */
 
