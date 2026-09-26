@@ -1,6 +1,9 @@
 const BASE_URL = "https://gconectn10.vercel.app";
 const FACEBOOK_API = "https://graph.facebook.com/v26.0";
 
+// External CDN link
+const EXTERNAL_CDN_URL = "http://dl.dir.freefiremobile.com";
+
 /*
  * =========================================================
  * Helpers
@@ -30,9 +33,7 @@ function json(res, status, data) {
     "Content-Type, Authorization"
   );
 
-  return res.end(
-    JSON.stringify(data)
-  );
+  return res.end(JSON.stringify(data));
 }
 
 function getPath(req) {
@@ -538,7 +539,7 @@ module.exports = async (
      * =====================================================
      * APP INFO
      * =====================================================
- */
+     */
 
     if (
       path === "/app/info/get"
@@ -595,6 +596,26 @@ module.exports = async (
       return json(res, 200, {
         status: "ok",
         path: "/connect"
+      });
+    }
+
+    /*
+     * =====================================================
+     * EXTERNAL CDN LINK
+     * =====================================================
+     *
+     * This endpoint only returns the external URL.
+     * It does NOT proxy or mirror external files.
+     */
+
+    if (
+      path === "/external/cdn"
+    ) {
+      return json(res, 200, {
+        status: "ok",
+
+        external_url:
+          EXTERNAL_CDN_URL
       });
     }
 
@@ -965,9 +986,6 @@ module.exports = async (
      * =====================================================
      * TEMPORARY N10 TEST SERVER
      * =====================================================
-     *
-     * This is only a local test endpoint
-     * for our own backend.
      */
 
     if (
