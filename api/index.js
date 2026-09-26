@@ -558,6 +558,18 @@ module.exports = async (
         supports_implicit_sdk_logging:
           true,
 
+        gdpv4_nux_enabled:
+          false,
+
+        gdpv4_nux_content:
+          {},
+
+        android_dialog_configs:
+          {},
+
+        android_sdk_error_categories:
+          [],
+
         ios_dialog_configs:
           {},
 
