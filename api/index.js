@@ -518,10 +518,42 @@ module.exports = async (
      * =====================================================
      * HOME
      * =====================================================
+     *
+     * IMPORTANT:
+     * / returns 404 Not Found
+     * /api and /api/ remain JSON
      */
 
+    if (path === "/") {
+      res.statusCode = 404;
+
+      res.setHeader(
+        "Content-Type",
+        "text/html; charset=utf-8"
+      );
+
+      res.setHeader(
+        "Access-Control-Allow-Origin",
+        "*"
+      );
+
+      return res.end(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>404 Not Found</title>
+</head>
+<body>
+  <h1>Not Found</h1>
+  <p>
+    The requested URL was not found on the server.
+    If you entered the URL manually please check your spelling and try again.
+  </p>
+</body>
+</html>`);
+    }
+
     if (
-      path === "/" ||
       path === "/api" ||
       path === "/api/"
     ) {
